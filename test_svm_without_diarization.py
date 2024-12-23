@@ -57,6 +57,7 @@ def extract_features_to_csv(folder_path, csv_output_path):
         all_features.append(avg_features)
         file_names.append(os.path.basename(file_path))
 
+
     # Combine features and file names into a single array
     feature_data = np.array(all_features)
     header = ["File"] + feature_names
@@ -72,33 +73,35 @@ def extract_features_to_csv(folder_path, csv_output_path):
 
 
 # Example usage
-#extract_features_to_csv("/home/droidis/Desktop/train", "/home/droidis/Desktop/MFCC.csv")
+#extract_features_to_csv("/home/droidis/Desktop/train", "/home/droidis/Desktop/MFCC1.csv")
 
-df1 = pd.read_csv('MFCC.csv')
-df2 = pd.read_csv('training-groundtruth.csv')
+mfcc = pd.read_csv('MFCC.csv')
+training_groundtruth = pd.read_csv('training-groundtruth.csv')
 
-df1=df1.sort_values('File')
-df1['File'] = df1['File'].str.replace('.mp3','')
+mfcc=mfcc.sort_values('File')
+mfcc['File'] = mfcc['File'].str.replace('.mp3', '')
 
-df_final = df1.merge(df2, left_on = 'File', right_on = 'adressfname')
-df_final = df_final.drop('adressfname', axis=1)
+final_features = mfcc.merge(training_groundtruth, left_on ='File', right_on ='adressfname')
+final_features = final_features.drop('adressfname', axis=1)
 
-mean= df_final[['educ']].mean()
-df_final['educ'] = df_final['educ'].replace(np.nan,float(mean))
-df_final=df_final.dropna(axis=0)
+mean= final_features[['educ']].mean()
+final_features['educ'] = final_features['educ'].replace(np.nan, float(mean))
+final_features=final_features.dropna(axis=0)
 
-X = df_final.drop('dx',axis=1 ) # Features
+X = final_features.drop('dx', axis=1) # Features
 X = X.drop('File',axis=1 )
 X = X.drop('gender',axis=1 )
 
 
-y = df_final.dx # Target variable
+y = final_features.dx # Target variable
 
 
 
 #print(X.isnull().sum())
 
 #print(X.to_string())
+
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
 
 model = svm.SVC(kernel='linear')
