@@ -9,17 +9,18 @@ from pyAudioAnalysis import audioTrainTest as aT
 from sklearn import svm
 from sklearn import metrics
 from sklearn.metrics import accuracy_score
+import assemblyai as aai
+import os
+from nltk.tokenize import word_tokenize
+from nltk.probability import FreqDist
 
-
-
-def split_data(features, labels, test_size=0.2):
-    return train_test_split(features, labels, test_size=test_size, random_state=42)
+#from diarization_and_feature_extraction_from_text import text_features
 
 '''aT.extract_features_and_train(["/home/droidis/Desktop/sample/1", "/home/droidis/Desktop/sample/2"], 1.0, 1.0, aT.shortTermWindow, aT.shortTermStep, "knn", "svmSMtemp", False)
 #aT.file_classification("data/doremi.wav", "svmSMtemp","svm")'''
 
 
-def extract_features_to_csv(folder_path, csv_output_path):
+def extract_features_to_csv(audios):
     """
     Extract audio features from a folder of WAV files and save them to a CSV file.
 
@@ -28,11 +29,11 @@ def extract_features_to_csv(folder_path, csv_output_path):
         csv_output_path (str): Path to save the extracted features as a CSV file.
     """
     # List all WAV files in the folder
-    audio_files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.mp3')]
+    audio_files = [os.path.join(audios, f) for f in os.listdir(audios) if f.endswith('.mp3')]
 
     # Check if there are valid audio files
     if not audio_files:
-        raise ValueError("No WAV files found in the specified folder.")
+        raise ValueError("No mp3 files found in the specified folder.")
 
     all_features = []  # To store features from all files
     file_names = []  # To store corresponding file names
@@ -57,61 +58,158 @@ def extract_features_to_csv(folder_path, csv_output_path):
         all_features.append(avg_features)
         file_names.append(os.path.basename(file_path))
 
+    # Combine file names and features into a DataFrame
+    mfcc = pd.DataFrame(all_features, columns=feature_names)
+    mfcc.insert(0, 'File', file_names)  # Insert file names as the first column
 
-    # Combine features and file names into a single array
-    feature_data = np.array(all_features)
-    header = ["File"] + feature_names
+    # Write DataFrame to CSV
+    mfcc.to_csv("mfcc.csv.csv", index=False)
 
-    # Write to CSV
-    with open(csv_output_path, 'w', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(header)  # Write header
-        for i, row in enumerate(feature_data):
-            csvwriter.writerow([file_names[i]] + row.tolist())
+    print(f"Features saved to mfcc.csv.csv")
+    return mfcc
 
-    print(f"Features saved to {csv_output_path}")
+def diarization_and_feature_extraction_from_text(audios):
+    text_features = pd.DataFrame(columns=['filename', 'Word Variance', 'Hapax Legomena'])
+    # Replace with your API key
+    aai.settings.api_key = "262ec24608c0442483768e3004d70d53"
+    config = aai.TranscriptionConfig(speaker_labels=True)
 
+    directory = os.fsencode(audios)
+
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)
+        if filename.endswith(".mp3"):
+            url = audios + '/' + filename
+            transcriber = aai.Transcriber()
+            transcript = transcriber.transcribe(
+                url,
+                config=config
+            )
+
+            for utterance in transcript.utterances:
+                # print(f"Speaker {utterance.speaker}: {utterance.text}")
+                text = utterance.text
+
+        tokens = word_tokenize(text.lower())
+
+        # Frequency distribution
+        fdist = FreqDist(tokens)
+        word_variance = len(fdist) / len(tokens)  # Lexical richnes
+        hapax_legomena = len([word for word, freq in fdist.items() if freq == 1])
+        text_features = text_features._append(
+            {'filename': filename, 'Word Variance': word_variance, 'Hapax Legomena': hapax_legomena}, ignore_index=True)
+
+    text_features = text_features.sort_values('filename')
+    text_features.to_csv('text_features.csv', index=False)
+    return text_features
+
+def fuse_data(mfcc, text_features, groundtruth):
+    # final dataframe preparation
+    mfcc = mfcc.sort_values('File')
+    mfcc['File'] = mfcc['File'].str.replace('.mp3', '')
+    text_features['filename'] = text_features['filename'].str.replace('.mp3', '')
+    final_features = mfcc.merge(groundtruth, left_on='File', right_on='adressfname')
+    final_features = final_features.merge(text_features, left_on='File', right_on='filename')
+    final_features = final_features.drop('adressfname', axis=1)
+    final_features = final_features.drop('filename', axis=1)
+
+    # handle missing education values by assigning the mean. Should i assign 2 different means one for each class?
+    mean = final_features[['educ']].mean()
+    final_features['educ'] = final_features['educ'].replace(np.nan, float(mean))
+
+    final_features = final_features.dropna(axis=0)
+
+    # handle categorical values in gender column
+    final_features['gender'] = final_features['gender'].map({'male': 0, 'female': 1})
+
+    final_features.to_csv('final_features.csv', index=False)
+
+    return final_features
+
+def main(audios):
+    mfcc = extract_features_to_csv(audios)
+    text_features = diarization_and_feature_extraction_from_text(audios)
+    training_groundtruth = pd.read_csv('training-groundtruth.csv')
+
+    #final dataframe preparation
+    final_features = fuse_data(mfcc,text_features, training_groundtruth)
+
+    X = final_features.drop('dx', axis=1)  # Features
+    X = X.drop('File', axis=1)
+
+    y = final_features.dx  # Target variable
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
+
+    model = svm.SVC(kernel='linear')
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+    cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
+    print(cnf_matrix)
+    accuracy = accuracy_score(y_pred, y_test)
+    print(accuracy)
+
+    '''mfcc.csv = mfcc.csv.sort_values('File')
+    mfcc.csv['File'] = mfcc.csv['File'].str.replace('.mp3', '')
+    text_features['filename'] = text_features['filename'].str.replace('.mp3', '')
+    final_features = mfcc.csv.merge(training_groundtruth, left_on='File', right_on='adressfname')
+    final_features = final_features.merge(text_features, left_on='File', right_on='filename')
+    final_features = final_features.drop('adressfname', axis=1)
+    final_features = final_features.drop('filename', axis=1)
+    mean = final_features[['educ']].mean()
+    final_features['educ'] = final_features['educ'].replace(np.nan, float(mean))
+    final_features = final_features.dropna(axis=0)
+    final_features['gender'] = final_features['gender'].map({'male': 0, 'female': 1})
+    final_features.to_csv('final_features.csv', index=False)
+
+    
+    return final_features'''
 
 # Example usage
-#extract_features_to_csv("/home/droidis/Desktop/train", "/home/droidis/Desktop/MFCC1.csv")
-
-mfcc = pd.read_csv('MFCC.csv')
-training_groundtruth = pd.read_csv('training-groundtruth.csv')
-
-mfcc=mfcc.sort_values('File')
-mfcc['File'] = mfcc['File'].str.replace('.mp3', '')
-
-final_features = mfcc.merge(training_groundtruth, left_on ='File', right_on ='adressfname')
-final_features = final_features.drop('adressfname', axis=1)
-
-mean= final_features[['educ']].mean()
-final_features['educ'] = final_features['educ'].replace(np.nan, float(mean))
-final_features=final_features.dropna(axis=0)
-
-X = final_features.drop('dx', axis=1) # Features
-X = X.drop('File',axis=1 )
-X = X.drop('gender',axis=1 )
+#extract_features_to_csv("/home/droidis/Desktop/train_edited", "/home/droidis/Desktop/MFCC_edited.csv")
+#extract_features_to_csv("/home/droidis/Desktop/train_edited", "MFCC_edited.csv")
 
 
-y = final_features.dx # Target variable
+audios = "train"
 
+main(audios)
 
+'''mfcc = pd.read_csv("mfcc.csv")
+text_features= pd.read_csv("text_features.csv")
+training_groundtruth = pd.read_csv("training-groundtruth.csv")
 
-#print(X.isnull().sum())
+final_features = fuse_data(mfcc,text_features, training_groundtruth)
 
-#print(X.to_string())
+X = final_features.drop('dx', axis=1)  # Features
+X = X.drop('File', axis=1)
 
+y = final_features.dx  # Target variable
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=16)
 
 model = svm.SVC(kernel='linear')
 model.fit(X_train, y_train)
 
-y_pred=model.predict(X_test)
+y_pred = model.predict(X_test)
 cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
 print(cnf_matrix)
 accuracy = accuracy_score(y_pred, y_test)
-print(accuracy)
+print(accuracy)'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
 
 
 
