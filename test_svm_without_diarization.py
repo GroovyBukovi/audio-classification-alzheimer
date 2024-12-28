@@ -7,6 +7,15 @@ from pyAudioAnalysis import MidTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO
 from pyAudioAnalysis import audioTrainTest as aT
 from sklearn import svm
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+from sklearn.ensemble import AdaBoostClassifier
 from sklearn import metrics
 from sklearn.metrics import accuracy_score
 import assemblyai as aai
@@ -173,9 +182,9 @@ def main(audios):
 
 audios = "train"
 
-main(audios)
+#main(audios)
 
-'''mfcc = pd.read_csv("mfcc.csv")
+mfcc = pd.read_csv("mfcc.csv")
 text_features= pd.read_csv("text_features.csv")
 training_groundtruth = pd.read_csv("training-groundtruth.csv")
 
@@ -186,16 +195,25 @@ X = X.drop('File', axis=1)
 
 y = final_features.dx  # Target variable
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=16)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
-model = svm.SVC(kernel='linear')
+#model = svm.SVC(kernel='linear')
+#model = LogisticRegression()
+#model = KNeighborsClassifier(n_neighbors=5)
+#model = DecisionTreeClassifier()
+#model = RandomForestClassifier(n_estimators=100)
+#model = GradientBoostingClassifier(n_estimators=100)
+#model = GaussianNB()
+#model = LinearDiscriminantAnalysis()
+#model = QuadraticDiscriminantAnalysis()
+model = AdaBoostClassifier(n_estimators=50)
 model.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
 cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
 print(cnf_matrix)
 accuracy = accuracy_score(y_pred, y_test)
-print(accuracy)'''
+print(accuracy)
 
 
 
