@@ -198,7 +198,7 @@ X = final_features.drop('dx', axis=1)  # Features
 X = X.drop('File', axis=1)
 y = final_features.dx  # Target variable
 
-# normalize
+# normalise
 scaler = MinMaxScaler()
 
 # Normalize the DataFrame
