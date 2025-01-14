@@ -7,6 +7,7 @@ from pyAudioAnalysis import MidTermFeatures as aF
 from pyAudioAnalysis import audioBasicIO
 from pyAudioAnalysis import audioTrainTest as aT
 from sklearn import svm
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -135,6 +136,7 @@ def fuse_data(mfcc, text_features, groundtruth):
 
     return final_features
 
+
 def main(audios):
     mfcc = extract_features_to_csv(audios)
     text_features = diarization_and_feature_extraction_from_text(audios)
@@ -190,23 +192,36 @@ training_groundtruth = pd.read_csv("training-groundtruth.csv")
 
 final_features = fuse_data(mfcc,text_features, training_groundtruth)
 
+
+
 X = final_features.drop('dx', axis=1)  # Features
 X = X.drop('File', axis=1)
-
 y = final_features.dx  # Target variable
+
+# normalize
+scaler = MinMaxScaler()
+
+# Normalize the DataFrame
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+
+# standardize
+scaler = StandardScaler()
+
+# Standardize the DataFrame
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
 #model = svm.SVC(kernel='linear')
 #model = LogisticRegression()
-#model = KNeighborsClassifier(n_neighbors=5)
+model = KNeighborsClassifier(n_neighbors=10) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
 #model = DecisionTreeClassifier()
 #model = RandomForestClassifier(n_estimators=100)
 #model = GradientBoostingClassifier(n_estimators=100)
-#model = GaussianNB()
-#model = LinearDiscriminantAnalysis()
-#model = QuadraticDiscriminantAnalysis()
-model = AdaBoostClassifier(n_estimators=50)
+#model = GaussianNB() # 81% for normalized and standardized, 83% for initial data
+#model = LinearDiscriminantAnalysis() #73% for initial data, normalized and standardized
+#model = QuadraticDiscriminantAnalysis() # 50% for initial, 69% for normalised data, and 80% for standardized
+#model = AdaBoostClassifier(n_estimators=50)
 model.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
