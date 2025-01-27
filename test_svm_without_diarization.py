@@ -1,5 +1,5 @@
-import os
 import csv
+import time
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -18,7 +18,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn import metrics
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 import assemblyai as aai
 import os
 from nltk.tokenize import word_tokenize
@@ -32,13 +32,14 @@ from nltk.probability import FreqDist
 
 def extract_features_to_csv(audios):
     """
-    Extract audio features from a folder of WAV files and save them to a CSV file.
+    Extract audio features from a folder of mp3 files and save them to a CSV file.
 
     Args:
         folder_path (str): Path to the folder containing audio files.
         csv_output_path (str): Path to save the extracted features as a CSV file.
     """
     # List all WAV files in the folder
+    print("Extracting MFCC features...")
     audio_files = [os.path.join(audios, f) for f in os.listdir(audios) if f.endswith('.mp3')]
 
     # Check if there are valid audio files
@@ -58,9 +59,15 @@ def extract_features_to_csv(audios):
         # Ensure mono audio
         signal = audioBasicIO.stereo_to_mono(signal)
 
-        # Extract mid-term features
+        """
+        Extract mid-term features
+        Mid-term features analyze segments of audio data over a longer period than short-term features,
+        usually summarizing characteristics like energy, frequency, etc., from a segment of the audio.
+        
+        """
+
         mt_features, _, feature_names = aF.mid_feature_extraction(
-            signal, sampling_rate, 1.0 * sampling_rate, 0.5 * sampling_rate, 0.05 * sampling_rate, 0.05 * sampling_rate
+            signal, sampling_rate, 5.0 * sampling_rate, 2.5 * sampling_rate, 0.05 * sampling_rate, 0.05 * sampling_rate
         )
 
         # Average features over windows
@@ -73,12 +80,13 @@ def extract_features_to_csv(audios):
     mfcc.insert(0, 'File', file_names)  # Insert file names as the first column
 
     # Write DataFrame to CSV
-    mfcc.to_csv("mfcc.csv.csv", index=False)
+    mfcc.to_csv("mfcc_5_sec.csv", index=False)
 
-    print(f"Features saved to mfcc.csv.csv")
+    print(f"Features saved to mfcc.csv")
     return mfcc
 
 def diarization_and_feature_extraction_from_text(audios):
+    print("Diarizing and extracting features from text...")
     text_features = pd.DataFrame(columns=['filename', 'Word Variance', 'Hapax Legomena'])
     # Replace with your API key
     aai.settings.api_key = "262ec24608c0442483768e3004d70d53"
@@ -114,6 +122,7 @@ def diarization_and_feature_extraction_from_text(audios):
     return text_features
 
 def fuse_data(mfcc, text_features, groundtruth):
+    print("Fusing all the features in a finalized dataframe...")
     # final dataframe preparation
     mfcc = mfcc.sort_values('File')
     mfcc['File'] = mfcc['File'].str.replace('.mp3', '')
@@ -138,10 +147,12 @@ def fuse_data(mfcc, text_features, groundtruth):
 
 
 def main(audios):
+    start_time = time.time()
     mfcc = extract_features_to_csv(audios)
     text_features = diarization_and_feature_extraction_from_text(audios)
     training_groundtruth = pd.read_csv('training-groundtruth.csv')
 
+    print("Finalizing data and splitting in test and training corpuses...")
     #final dataframe preparation
     final_features = fuse_data(mfcc,text_features, training_groundtruth)
 
@@ -150,7 +161,34 @@ def main(audios):
 
     y = final_features.dx  # Target variable
 
+    # Normalize the DataFrame
+    scaler = MinMaxScaler()
+    X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
+
+    '''models=[svm.SVC(kernel='linear'),
+            LogisticRegression(),
+            KNeighborsClassifier(n_neighbors=10),
+            DecisionTreeClassifier(),
+            RandomForestClassifier(n_estimators=100),
+            GradientBoostingClassifier(n_estimators=100),
+            GaussianNB(),
+            LinearDiscriminantAnalysis(),
+            QuadraticDiscriminantAnalysis(),
+            AdaBoostClassifier(n_estimators=50)]
+
+
+    for model in models:
+
+        model = svm.SVC(kernel='linear')
+        model.fit(X_train, y_train)
+
+        y_pred = model.predict(X_test)
+        cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
+        print("CNF matrix for " + str(model) + '\n' + cnf_matrix)
+        accuracy = accuracy_score(y_pred, y_test)
+        print("Accuracy score for " + str(model) + '\n' + accuracy)'''
 
     model = svm.SVC(kernel='linear')
     model.fit(X_train, y_train)
@@ -160,7 +198,6 @@ def main(audios):
     print(cnf_matrix)
     accuracy = accuracy_score(y_pred, y_test)
     print(accuracy)
-
     '''mfcc.csv = mfcc.csv.sort_values('File')
     mfcc.csv['File'] = mfcc.csv['File'].str.replace('.mp3', '')
     text_features['filename'] = text_features['filename'].str.replace('.mp3', '')
@@ -176,6 +213,10 @@ def main(audios):
 
     
     return final_features'''
+    end_time = time.time()
+    runtime = end_time - start_time
+    print(f"Runtime: {runtime} seconds")
+
 
 # Example usage
 #extract_features_to_csv("/home/droidis/Desktop/train_edited", "/home/droidis/Desktop/MFCC_edited.csv")
@@ -186,7 +227,7 @@ audios = "train"
 
 #main(audios)
 
-mfcc = pd.read_csv("mfcc.csv")
+mfcc = pd.read_csv("mfcc_5_sec.csv")
 text_features= pd.read_csv("text_features.csv")
 training_groundtruth = pd.read_csv("training-groundtruth.csv")
 
@@ -204,24 +245,26 @@ scaler = MinMaxScaler()
 # Normalize the DataFrame
 X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
-# standardize
+'''# standardize
 scaler = StandardScaler()
 
 # Standardize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
-#model = svm.SVC(kernel='linear')
-#model = LogisticRegression()
-model = KNeighborsClassifier(n_neighbors=10) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
-#model = DecisionTreeClassifier()
-#model = RandomForestClassifier(n_estimators=100)
-#model = GradientBoostingClassifier(n_estimators=100)
-#model = GaussianNB() # 81% for normalized and standardized, 83% for initial data
-#model = LinearDiscriminantAnalysis() #73% for initial data, normalized and standardized
+model = svm.SVC(kernel='rbf', gamma=1.2, C=2)
+#model = LogisticRegression(C=0.005, penalty='l2', solver='lbfgs', max_iter=200, tol=1e-4)
+#model = KNeighborsClassifier(n_neighbors=10) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
+#model = DecisionTreeClassifier(max_depth=5,             # limit the tree depth
+                               #min_samples_split=5,    # require at least 10 samples to split a node
+                               #min_samples_leaf=2,      # require at least 5 samples per leaf
+                               #max_features='sqrt',     # use square root of the features for splits
+                               #random_state=45)          # for reproducibility
+#model = RandomForestClassifier(n_estimators=10) #81% for normalized data and 10 estimators
+#model = GaussianNB(var_smoothing=1e-1) # 81% for normalized and standardized, 83% for initial data
+#model = LinearDiscriminantAnalysis(solver='lsqr', shrinkage=1.0) #73% for initial data, normalized and standardized
 #model = QuadraticDiscriminantAnalysis() # 50% for initial, 69% for normalised data, and 80% for standardized
-#model = AdaBoostClassifier(n_estimators=50)
 model.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
@@ -229,6 +272,8 @@ cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
 print(cnf_matrix)
 accuracy = accuracy_score(y_pred, y_test)
 print(accuracy)
+f1 = f1_score(y_pred, y_test, pos_label='Control')
+print(f"F1 Score: {f1}")
 
 
 
@@ -242,7 +287,7 @@ print(accuracy)
 
 
 
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)'''
 
 
 
