@@ -148,7 +148,7 @@ def fuse_data(mfcc, text_features, groundtruth):
 
 def main(audios):
     start_time = time.time()
-    mfcc = extract_features_to_csv(audios)
+    mfcc = extract_mfcc_features_to_csv(audios)
     text_features = diarization_and_feature_extraction_from_text(audios)
     training_groundtruth = pd.read_csv('training-groundtruth.csv')
 
