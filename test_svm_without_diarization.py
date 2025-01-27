@@ -30,7 +30,7 @@ from nltk.probability import FreqDist
 #aT.file_classification("data/doremi.wav", "svmSMtemp","svm")'''
 
 
-def extract_features_to_csv(audios):
+def extract_mfcc_features_to_csv(audios):
     """
     Extract audio features from a folder of mp3 files and save them to a CSV file.
 
