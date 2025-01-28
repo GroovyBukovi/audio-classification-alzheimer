@@ -23,10 +23,12 @@ import assemblyai as aai
 import os
 from nltk.tokenize import word_tokenize
 from nltk.probability import FreqDist
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder
 
 #from diarization_and_feature_extraction_from_text import text_features
 
-'''aT.extract_features_and_train(["/home/droidis/Desktop/sample/1", "/home/droidis/Desktop/sample/2"], 1.0, 1.0, aT.shortTermWindow, aT.shortTermStep, "knn", "svmSMtemp", False)
+#aT.extract_features_and_train(["train"], 1.0, 1.0, aT.shortTermWindow, aT.shortTermStep, "knn", "svmSMtemp", False)
 #aT.file_classification("data/doremi.wav", "svmSMtemp","svm")'''
 
 
@@ -67,7 +69,7 @@ def extract_mfcc_features_to_csv(audios):
         """
 
         mt_features, _, feature_names = aF.mid_feature_extraction(
-            signal, sampling_rate, 5.0 * sampling_rate, 2.5 * sampling_rate, 0.05 * sampling_rate, 0.05 * sampling_rate
+            signal, sampling_rate, 45.0 * sampling_rate, 22.5 * sampling_rate, 0.05 * sampling_rate, 0.05 * sampling_rate
         )
 
         # Average features over windows
@@ -80,7 +82,7 @@ def extract_mfcc_features_to_csv(audios):
     mfcc.insert(0, 'File', file_names)  # Insert file names as the first column
 
     # Write DataFrame to CSV
-    mfcc.to_csv("mfcc_5_sec.csv", index=False)
+    mfcc.to_csv("mfcc_45_sec.csv", index=False)
 
     print(f"Features saved to mfcc.csv")
     return mfcc
@@ -127,6 +129,7 @@ def fuse_data(mfcc, text_features, groundtruth):
     mfcc = mfcc.sort_values('File')
     mfcc['File'] = mfcc['File'].str.replace('.mp3', '')
     text_features['filename'] = text_features['filename'].str.replace('.mp3', '')
+
     final_features = mfcc.merge(groundtruth, left_on='File', right_on='adressfname')
     final_features = final_features.merge(text_features, left_on='File', right_on='filename')
     final_features = final_features.drop('adressfname', axis=1)
@@ -145,8 +148,23 @@ def fuse_data(mfcc, text_features, groundtruth):
 
     return final_features
 
+def fit_predict_accuracy(model, X_train, X_test, y_train, y_test):
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-def main(audios):
+    cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=cnf_matrix, display_labels=["Control", "ProbableAD"])
+    cm_display.plot()
+    #plt.show()
+    print(f"CNF Matrix: \n {cnf_matrix}")
+    accuracy = accuracy_score(y_pred, y_test)
+    print(f"Accuracy: {accuracy}")
+    f1 = f1_score(y_pred, y_test, pos_label='Control')
+    print(f"F1 Score Control: {f1}")
+    f1 = f1_score(y_pred, y_test, pos_label='ProbableAD')
+    print(f"F1 Score ProbableAD: {f1}")
+
+def main(audios,model):
     start_time = time.time()
     mfcc = extract_mfcc_features_to_csv(audios)
     text_features = diarization_and_feature_extraction_from_text(audios)
@@ -158,7 +176,6 @@ def main(audios):
 
     X = final_features.drop('dx', axis=1)  # Features
     X = X.drop('File', axis=1)
-
     y = final_features.dx  # Target variable
 
     # Normalize the DataFrame
@@ -167,67 +184,26 @@ def main(audios):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
 
-    '''models=[svm.SVC(kernel='linear'),
-            LogisticRegression(),
-            KNeighborsClassifier(n_neighbors=10),
-            DecisionTreeClassifier(),
-            RandomForestClassifier(n_estimators=100),
-            GradientBoostingClassifier(n_estimators=100),
-            GaussianNB(),
-            LinearDiscriminantAnalysis(),
-            QuadraticDiscriminantAnalysis(),
-            AdaBoostClassifier(n_estimators=50)]
-
-
-    for model in models:
-
-        model = svm.SVC(kernel='linear')
-        model.fit(X_train, y_train)
-
-        y_pred = model.predict(X_test)
-        cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
-        print("CNF matrix for " + str(model) + '\n' + cnf_matrix)
-        accuracy = accuracy_score(y_pred, y_test)
-        print("Accuracy score for " + str(model) + '\n' + accuracy)'''
-
-    model = svm.SVC(kernel='linear')
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-    cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
-    print(cnf_matrix)
-    accuracy = accuracy_score(y_pred, y_test)
-    print(accuracy)
-    '''mfcc.csv = mfcc.csv.sort_values('File')
-    mfcc.csv['File'] = mfcc.csv['File'].str.replace('.mp3', '')
-    text_features['filename'] = text_features['filename'].str.replace('.mp3', '')
-    final_features = mfcc.csv.merge(training_groundtruth, left_on='File', right_on='adressfname')
-    final_features = final_features.merge(text_features, left_on='File', right_on='filename')
-    final_features = final_features.drop('adressfname', axis=1)
-    final_features = final_features.drop('filename', axis=1)
-    mean = final_features[['educ']].mean()
-    final_features['educ'] = final_features['educ'].replace(np.nan, float(mean))
-    final_features = final_features.dropna(axis=0)
-    final_features['gender'] = final_features['gender'].map({'male': 0, 'female': 1})
-    final_features.to_csv('final_features.csv', index=False)
-
-    
-    return final_features'''
     end_time = time.time()
     runtime = end_time - start_time
-    print(f"Runtime: {runtime} seconds")
+    print(f"Runtime for data preparation: {runtime} seconds")
+    fit_predict_accuracy(model, X_train, X_test, y_train, y_test)
+
+
+
+
 
 
 # Example usage
-#extract_features_to_csv("/home/droidis/Desktop/train_edited", "/home/droidis/Desktop/MFCC_edited.csv")
+#extract_features_to_csv("train", "mfcc_45_sec")
 #extract_features_to_csv("/home/droidis/Desktop/train_edited", "MFCC_edited.csv")
 
 
 audios = "train"
+#main(audios, model)
 
-#main(audios)
+mfcc = pd.read_csv("mfcc_10_sec.csv")
 
-mfcc = pd.read_csv("mfcc_5_sec.csv")
 text_features= pd.read_csv("text_features.csv")
 training_groundtruth = pd.read_csv("training-groundtruth.csv")
 
@@ -238,53 +214,37 @@ final_features = fuse_data(mfcc,text_features, training_groundtruth)
 X = final_features.drop('dx', axis=1)  # Features
 X = X.drop('File', axis=1)
 y = final_features.dx  # Target variable
-
+le = LabelEncoder()
+y_encoded = le.fit_transform(y)  # Assuming y contains the original class labels
+print(le.classes_)  # This will show the order of classes
 # normalise
 scaler = MinMaxScaler()
 
 # Normalize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+#X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
-'''# standardize
-scaler = StandardScaler()
+# standardize
+#scaler = StandardScaler()
 
 # Standardize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
-model = svm.SVC(kernel='rbf', gamma=1.2, C=2)
-#model = LogisticRegression(C=0.005, penalty='l2', solver='lbfgs', max_iter=200, tol=1e-4)
-#model = KNeighborsClassifier(n_neighbors=10) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
+model = svm.SVC(kernel='rbf', gamma=1.2, C=1)
+#model = LogisticRegression(C=0.005, penalty='l2', max_iter=200, tol=1e-4)
+#model = KNeighborsClassifier(n_neighbors=20) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
 #model = DecisionTreeClassifier(max_depth=5,             # limit the tree depth
                                #min_samples_split=5,    # require at least 10 samples to split a node
                                #min_samples_leaf=2,      # require at least 5 samples per leaf
-                               #max_features='sqrt',     # use square root of the features for splits
+                               #max_features=29,     # use square root of the features for splits
                                #random_state=45)          # for reproducibility
-#model = RandomForestClassifier(n_estimators=10) #81% for normalized data and 10 estimators
+#model = RandomForestClassifier(n_estimators=9) #81% for normalized data and 10 estimators
 #model = GaussianNB(var_smoothing=1e-1) # 81% for normalized and standardized, 83% for initial data
-#model = LinearDiscriminantAnalysis(solver='lsqr', shrinkage=1.0) #73% for initial data, normalized and standardized
-#model = QuadraticDiscriminantAnalysis() # 50% for initial, 69% for normalised data, and 80% for standardized
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
-cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
-print(cnf_matrix)
-accuracy = accuracy_score(y_pred, y_test)
-print(accuracy)
-f1 = f1_score(y_pred, y_test, pos_label='Control')
-print(f"F1 Score: {f1}")
+#model = LinearDiscriminantAnalysis(solver='eigen', shrinkage=1) #73% for initial data, normalized and standardized
 
 
-
-
-
-
-
-
-
-
-
+fit_predict_accuracy(model, X_train, X_test, y_train, y_test)
 
 
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)'''
