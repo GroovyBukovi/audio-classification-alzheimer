@@ -9,6 +9,7 @@ from pyAudioAnalysis import audioTrainTest as aT
 from scipy.stats import mode
 from sklearn import svm
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from xgboost import XGBClassifier
 from sklearn.ensemble import VotingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -293,13 +294,70 @@ audios = "train"
 #main(audios, model)
 
 mfcc = pd.read_csv("mfcc_15_sec.csv")
+mfcc_labeled = pd.read_csv("mfcc_labeled.csv")
 
 text_features= pd.read_csv("text_features.csv")
-training_groundtruth = pd.read_csv("training-groundtruth.csv")
+text_features_labeled = pd.read_csv("text_features_labeled.csv")
 
+training_groundtruth = pd.read_csv("training-groundtruth.csv")
+top_5 = pd.read_csv("top_5_mfcc.csv")
 
 final_features = fuse_and_clean_data(mfcc, text_features, training_groundtruth)
+################### MFCC ONLY ###################
+#X = mfcc_labeled.drop('dx', axis=1)  # Features
+#X = X.drop('File', axis=1)
+#y = mfcc_labeled.dx
 
+
+
+############ TOP 20 MFCC ####################  model = svm.SVC(kernel='rbf', gamma=0.9, C=0.8)
+
+X = mfcc.drop('dx', axis=1)  # Features
+X = X.drop('File', axis=1)
+y = mfcc.dx
+
+################### TEXT FEATURES ONLY ################  model = LogisticRegression(C=0.5, penalty='l2', max_iter=200, tol=1e-4)
+#X = text_features_labeled.drop('dx', axis=1)  # Features
+#y = text_features_labeled.dx
+
+################### TRAINING GROUND TRUTH ONLY ################
+###### SVM???? ######## model = svm.SVC(kernel='rbf', gamma=0.1, C=0.4)
+
+'''
+
+# Compute class-specific means for 'educ'
+class_means_educ = training_groundtruth.groupby('dx')['educ'].transform(lambda x: x.fillna(x.mean()))
+
+# Assign the class-specific means
+training_groundtruth['educ'] = class_means_educ
+
+# Compute class-specific means for 'mmse'
+class_means_mmse = training_groundtruth.groupby('dx')['mmse'].transform(lambda x: x.fillna(x.mean()))
+
+# Assign the class-specific means
+training_groundtruth['mmse'] = class_means_mmse
+
+# Drop remaining NaN values (if any)
+training_groundtruth = training_groundtruth.dropna(axis=0)
+
+# Encode categorical values in 'gender'
+training_groundtruth['gender'] = training_groundtruth['gender'].map({'male': 0, 'female': 1})
+
+# Feature selection
+X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
+y = training_groundtruth['dx']
+print(X.to_string())'''
+
+######################## NORMALIZE-STANDARDISE ##########################
+
+# normalise
+scaler = MinMaxScaler()
+
+# standardize
+#scaler = StandardScaler()
+
+# Standardize the DataFrame
+#X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 ########## MODEL WITH ALL FEATURES FUSED ##############
 '''X = final_features.drop('dx', axis=1)  # Features
@@ -312,7 +370,7 @@ print(le.classes_)  # This will show the order of classes
 scaler = MinMaxScaler()
 
 # Normalize the DataFrame
-#X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 # standardize
 #scaler = StandardScaler()
@@ -320,42 +378,9 @@ scaler = MinMaxScaler()
 # Standardize the DataFrame
 X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
 
-########## MODEL WITH TRAINING GROUNDTRUTH DATASET ##############
-
-'''mean = training_groundtruth[['educ']].mean()
-training_groundtruth['educ'] = training_groundtruth['educ'].replace(np.nan, float(mean))
-training_groundtruth = training_groundtruth.drop('adressfname', axis=1)
-
-training_groundtruth = training_groundtruth.dropna(axis=0)
-
-# handle categorical values in gender column
-training_groundtruth['gender'] = training_groundtruth['gender'].map({'male': 0, 'female': 1})
-
-X = training_groundtruth.drop('dx', axis=1)  # Features
-y = training_groundtruth.dx'''
-
-
-########## MODEL WITH TEXT FEATURES ONLY ##############
-'''text_features = text_features.drop('filename', axis=1)
-
-#text_features = text_features.dropna(axis=0)
-
-
-X = text_features  # Features
-y = training_groundtruth.dx'''
-
-########## MODEL WITH MFCC FEATURES ONLY ##############
-
-'''mfcc= mfcc.sort_values(by='File', ascending=True)
-mfcc = mfcc.drop('File', axis=1)
-
-# handle categorical values in gender column
-
-X = mfcc  # Features
-y = training_groundtruth.dx'''
 
 ########## ENSEMBLE VOTING APPROACH ##############
-
+'''
 mean_educ = training_groundtruth[['educ']].mean()
 training_groundtruth['educ'] = training_groundtruth['educ'].replace(np.nan, float(mean_educ))
 
@@ -379,17 +404,18 @@ text_features = text_features.drop('filename', axis=1)
 
 X_2 = text_features
 
-mfcc= mfcc.sort_values(by='File', ascending=True)
-mfcc = mfcc.drop('File', axis=1)
-
+top_5= top_5.sort_values(by='File', ascending=True)
+top_5 = top_5.drop('File', axis=1)
+top_5 = top_5.drop('dx', axis=1)
 # handle categorical values in gender column
 
-X_3 = mfcc
+X_3 = top_5
+
 y = training_groundtruth.dx
 
-model1 = svm.SVC(kernel='rbf', gamma=1.2, C=1)
-model2 = LogisticRegression(C=0.005, penalty='l2', max_iter=200, tol=1e-4)
-model3 = svm.SVC(kernel='rbf', gamma=1.2, C=1)
+model1 = svm.SVC(kernel='rbf', gamma=0.1, C=1.5)
+model2 = LogisticRegression(C=0.5, penalty='l2', max_iter=200, tol=1e-4)
+model3 = svm.SVC(kernel='rbf', gamma=0.9, C=0.8)
 
 print(X_1.head())
 print(X_2.head())
@@ -416,26 +442,41 @@ final_prediction = df_preds.mode(axis=1)[0].values  # Select first mode if tie
 
 accuracy = accuracy_score(y_test, final_prediction)
 print("Final Accuracy (Late Fusion with Voting):", accuracy)
-
+'''
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
-model = svm.SVC(kernel='rbf', gamma=1.2, C=1)
-#model = LogisticRegression(C=0.005, penalty='l2', max_iter=200, tol=1e-4)
-#model = KNeighborsClassifier(n_neighbors=20) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
+#model = svm.SVC(kernel='rbf', gamma=0.1, C=1.5)
+#model = LogisticRegression(C=0.5, penalty='l2', max_iter=200, tol=1e-4)
+#model = KNeighborsClassifier(n_neighbors=10) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
 #model = DecisionTreeClassifier(max_depth=5,             # limit the tree depth
-                               #min_samples_split=5,    # require at least 10 samples to split a node
-                               #min_samples_leaf=2,      # require at least 5 samples per leaf
-                               #max_features=29,     # use square root of the features for splits
-                               #random_state=45)          # for reproducibility
-#model = RandomForestClassifier(n_estimators=9) #81% for normalized data and 10 estimators
+                               #min_samples_split=10,    # require at least 10 samples to split a node
+                               #min_samples_leaf=5,      # require at least 5 samples per leaf
+                               #max_features="sqrt",     # use square root of the features for splits
+                               #random_state=4)          # for reproducibility
+#model = RandomForestClassifier(n_estimators=5,           # Reduce trees to control complexity
+    #max_depth=2,              # Prevent deep, complex trees
+    #min_samples_split=3,     # Require at least 10 samples to split a node
+    #min_samples_leaf=5,       # Require at least 5 samples per leaf
+    #max_features="sqrt",      # Use only a subset of features per tree
+    #random_state=42)
 #model = GaussianNB(var_smoothing=1e-1) # 81% for normalized and standardized, 83% for initial data
 #model = LinearDiscriminantAnalysis(solver='eigen', shrinkage=1) #73% for initial data, normalized and standardized
 
 
+
+
 #fit_predict_accuracy(model, X_train, X_test, y_train, y_test)
 
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)'''
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
 
+rf = RandomForestClassifier()
+rf.fit(X_train, y_train)
+
+importances = rf.feature_importances_
+feature_importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': importances})
+feature_importance_df.sort_values(by='Importance', ascending=False)
+
+print(feature_importance_df.to_string())
 
 
 
