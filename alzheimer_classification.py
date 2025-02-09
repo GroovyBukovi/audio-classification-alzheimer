@@ -192,6 +192,7 @@ def fuse_and_clean_data(mfcc, text_features, groundtruth):
     print("Fusing all the features in a finalized dataframe...")
     # final dataframe preparation
     mfcc = mfcc.sort_values('File')
+    mfcc = mfcc.drop('dx', axis=1)
     mfcc['File'] = mfcc['File'].str.replace('.mp3', '')
     text_features['filename'] = text_features['filename'].str.replace('.mp3', '')
 
@@ -200,21 +201,8 @@ def fuse_and_clean_data(mfcc, text_features, groundtruth):
     final_features = final_features.drop('adressfname', axis=1)
     final_features = final_features.drop('filename', axis=1)
 
-    # handle missing education values by assigning the mean. Should i assign 2 different means one for each class?
-    mean = final_features[['educ']].mean()
-    final_features['educ'] = final_features['educ'].replace(np.nan, float(mean))
-    # handle missing mmse values by assigning the mean. Should i assign 2 different means one for each class?
-    mean_mmse = training_groundtruth[['mmse']].mean()
-    training_groundtruth['mmse'] = training_groundtruth['mmse'].replace(np.nan, float(mean_mmse))
+    final_features.to_csv('final_important_features_20_15_sec.csv', index=False)
 
-    final_features = final_features.dropna(axis=0)
-
-    # handle categorical values in gender column
-    final_features['gender'] = final_features['gender'].map({'male': 0, 'female': 1})
-
-    final_features.to_csv('final_features.csv', index=False)
-
-    return final_features
 
 def fuse_and_clean_data_no_text(mfcc, groundtruth):
     print("Fusing all the features in a finalized dataframe...")
@@ -293,16 +281,11 @@ def main(audios,model):
 audios = "train"
 #main(audios, model)
 
-mfcc = pd.read_csv("mfcc_15_sec.csv")
-mfcc_labeled = pd.read_csv("mfcc_labeled.csv")
-
-text_features= pd.read_csv("text_features.csv")
+mfcc = pd.read_csv("mfcc_30_sec.csv")
 text_features_labeled = pd.read_csv("text_features_labeled.csv")
+training_groundtruth = pd.read_csv("cleaned_training_groundtruth.csv")
+important_features = pd.read_csv("final_important_features_5_15_sec.csv")
 
-training_groundtruth = pd.read_csv("training-groundtruth.csv")
-top_5 = pd.read_csv("top_5_mfcc.csv")
-
-final_features = fuse_and_clean_data(mfcc, text_features, training_groundtruth)
 ################### MFCC ONLY ###################
 #X = mfcc_labeled.drop('dx', axis=1)  # Features
 #X = X.drop('File', axis=1)
@@ -312,9 +295,9 @@ final_features = fuse_and_clean_data(mfcc, text_features, training_groundtruth)
 
 ############ TOP 20 MFCC ####################  model = svm.SVC(kernel='rbf', gamma=0.9, C=0.8)
 
-X = mfcc.drop('dx', axis=1)  # Features
-X = X.drop('File', axis=1)
-y = mfcc.dx
+#X = top_5.drop('dx', axis=1)  # Features
+#X = X.drop('File', axis=1)
+#y = top_5.dx
 
 ################### TEXT FEATURES ONLY ################  model = LogisticRegression(C=0.5, penalty='l2', max_iter=200, tol=1e-4)
 #X = text_features_labeled.drop('dx', axis=1)  # Features
@@ -323,35 +306,14 @@ y = mfcc.dx
 ################### TRAINING GROUND TRUTH ONLY ################
 ###### SVM???? ######## model = svm.SVC(kernel='rbf', gamma=0.1, C=0.4)
 
-'''
-
-# Compute class-specific means for 'educ'
-class_means_educ = training_groundtruth.groupby('dx')['educ'].transform(lambda x: x.fillna(x.mean()))
-
-# Assign the class-specific means
-training_groundtruth['educ'] = class_means_educ
-
-# Compute class-specific means for 'mmse'
-class_means_mmse = training_groundtruth.groupby('dx')['mmse'].transform(lambda x: x.fillna(x.mean()))
-
-# Assign the class-specific means
-training_groundtruth['mmse'] = class_means_mmse
-
-# Drop remaining NaN values (if any)
-training_groundtruth = training_groundtruth.dropna(axis=0)
-
-# Encode categorical values in 'gender'
-training_groundtruth['gender'] = training_groundtruth['gender'].map({'male': 0, 'female': 1})
-
 # Feature selection
-X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
-y = training_groundtruth['dx']
-print(X.to_string())'''
+#X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
+#y = training_groundtruth['dx']
 
 ######################## NORMALIZE-STANDARDISE ##########################
 
 # normalise
-scaler = MinMaxScaler()
+#scaler = MinMaxScaler()
 
 # standardize
 #scaler = StandardScaler()
@@ -360,25 +322,27 @@ scaler = MinMaxScaler()
 #X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 ########## MODEL WITH ALL FEATURES FUSED ##############
-'''X = final_features.drop('dx', axis=1)  # Features
+'''
+X = final_features
+#X = final_features.drop('dx', axis=1)  # Features
+#X = X.drop('dx', axis=1)  # Features
 X = X.drop('File', axis=1)
-y = final_features.dx  # Target variable
+
+y = training_groundtruth.dx # Target variable
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)  # Assuming y contains the original class labels
 print(le.classes_)  # This will show the order of classes
 # normalise
-scaler = MinMaxScaler()
+#scaler = MinMaxScaler()
 
-# Normalize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 # standardize
-#scaler = StandardScaler()
+scaler = StandardScaler()
 
 # Standardize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
-
+'''
 ########## ENSEMBLE VOTING APPROACH ##############
 '''
 mean_educ = training_groundtruth[['educ']].mean()
@@ -445,11 +409,11 @@ print("Final Accuracy (Late Fusion with Voting):", accuracy)
 '''
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
-#model = svm.SVC(kernel='rbf', gamma=0.1, C=1.5)
-#model = LogisticRegression(C=0.5, penalty='l2', max_iter=200, tol=1e-4)
+#model = svm.SVC(kernel='rbf', gamma=0.5, C=2)
+#model = LogisticRegression(C=0.1, penalty='l2', max_iter=200, tol=1e-4)
 #model = KNeighborsClassifier(n_neighbors=10) # for normalised data it gives 76% accuracy, 92% for non initial and 76% for standardized. Test different amount of neighbours
 #model = DecisionTreeClassifier(max_depth=5,             # limit the tree depth
-                               #min_samples_split=10,    # require at least 10 samples to split a node
+                               #min_samples_split=2,    # require at least 10 samples to split a node
                                #min_samples_leaf=5,      # require at least 5 samples per leaf
                                #max_features="sqrt",     # use square root of the features for splits
                                #random_state=4)          # for reproducibility
@@ -467,6 +431,7 @@ print("Final Accuracy (Late Fusion with Voting):", accuracy)
 
 #fit_predict_accuracy(model, X_train, X_test, y_train, y_test)
 
+'''
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
 
 rf = RandomForestClassifier()
@@ -476,7 +441,8 @@ importances = rf.feature_importances_
 feature_importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': importances})
 feature_importance_df.sort_values(by='Importance', ascending=False)
 
-print(feature_importance_df.to_string())
+print(feature_importance_df.to_string())'''
 
 
 
+fuse_and_clean_data(top_20, text_features, training_groundtruth)

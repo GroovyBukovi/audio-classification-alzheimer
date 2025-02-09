@@ -18,3 +18,5 @@ training_groundtruth = training_groundtruth.dropna(axis=0)
 
 # Encode categorical values in 'gender'
 training_groundtruth['gender'] = training_groundtruth['gender'].map({'male': 0, 'female': 1})
+
+training_groundtruth.to_csv('cleaned_training_groundtruth.csv', index=False)
