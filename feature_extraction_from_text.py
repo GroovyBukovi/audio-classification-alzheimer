@@ -11,10 +11,10 @@ def feature_extraction_from_text(audios):
     nltk.download('punkt')
     print("Diarizing and extracting features from text...")
 
-    # ✅ Creating DataFrame just like before
+    # Creating DataFrame just like before
     text_features = pd.DataFrame(columns=['filename', 'Word Variance', 'Hapax Legomena'])
 
-    # ✅ Replace with your API key
+    # Replace with API key
     aai.settings.api_key = "262ec24608c0442483768e3004d70d53"
     config = aai.TranscriptionConfig(speaker_labels=True)
 
@@ -57,6 +57,6 @@ def feature_extraction_from_text(audios):
                 ignore_index=True
             )
 
-    # ✅ Sorting and saving to CSV just like before
+    #Sorting and saving to CSV just like before
     text_features = text_features.sort_values('filename')
     text_features.to_csv('text_features.csv', index=False)
