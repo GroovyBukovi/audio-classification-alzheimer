@@ -2,7 +2,7 @@
 ML project for binary classification of patient recordings with probable Alzheimer's disease.
 
 
-ML Project by Emmanuellam2408 and GroovyBukovi exploring different methods in audio binary classification. Specifically, the audio corpus consists of potential Alzheimer's disease (AD) patients' recordings and is relatively balanced between 'healthy' and 'potentialAD' individuals.
+ML Project by GroovyBukovi exploring different methods in audio binary classification. Specifically, the audio corpus consists of potential Alzheimer's disease (AD) patients' recordings and is relatively balanced between 'healthy' and 'potentialAD' individuals.
 
 Each audio file contains a conversation between the interviewer (healthcare professional) and the interviewee (patient), raising the need for diarization and audio splitting to specifically train, validate, and test our model using patient-only audio.
 
