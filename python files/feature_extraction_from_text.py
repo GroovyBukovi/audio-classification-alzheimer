@@ -33,7 +33,7 @@ def feature_extraction_from_text(audios):
                 print(f"Error processing {filename}: {e}")
                 continue  # Skip file if transcription fails
 
-            # ✅ Combine all speakers' utterances into one text block per audio file
+            # Combine all speakers' utterances into one text block per audio file
             full_text = " ".join([utterance.text for utterance in transcript.utterances])
 
             if not full_text.strip():
@@ -46,12 +46,12 @@ def feature_extraction_from_text(audios):
                 print(f"No valid words in {filename}, skipping...")
                 continue  # Skip if no tokens
 
-            # ✅ Compute features on the combined text
+            # Compute features on the combined text
             fdist = FreqDist(tokens)
             word_variance = len(fdist) / len(tokens)  # Lexical richness
             hapax_legomena = sum(1 for freq in fdist.values() if freq == 1)  # Count words appearing only once
 
-            # ✅ Append row to DataFrame just like before
+            # Append row to DataFrame just like before
             text_features = text_features._append(
                 {'filename': filename, 'Word Variance': word_variance, 'Hapax Legomena': hapax_legomena},
                 ignore_index=True
