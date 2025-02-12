@@ -36,10 +36,10 @@ from sklearn.preprocessing import LabelEncoder
 
 
 audios = "train"
-mfcc = pd.read_csv("top_5_mfcc.csv")
-text_features_labeled = pd.read_csv("text_features_labeled.csv")
-training_groundtruth = pd.read_csv("cleaned_training_groundtruth.csv")
-important_features = pd.read_csv("final_all_features_15_sec.csv")
+mfcc = pd.read_csv("../top_5_mfcc.csv")
+text_features_labeled = pd.read_csv("../text_features_labeled.csv")
+training_groundtruth = pd.read_csv("../cleaned_training_groundtruth.csv")
+important_features = pd.read_csv("../final_all_features_15_sec.csv")
 
 ################### MFCC ONLY ################### model = svm.SVC(kernel='rbf', gamma=0.07, C=2.5)
 #X = mfcc.drop('dx', axis=1)  # Features

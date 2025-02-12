@@ -6,7 +6,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 # Load the dataset
-file_path = "/home/droidis/PycharmProjects/projectML/final_important_features_5_15_sec.csv"  # Change to your actual file path
+file_path = "/final_important_features_5_15_sec.csv"  # Change to your actual file path
 df = pd.read_csv(file_path)
 
 # Convert class labels to numeric for PCA visualization

@@ -7,10 +7,10 @@ from sklearn import metrics
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 
-mfcc = pd.read_csv("top_5_mfcc.csv")
-text_features_labeled = pd.read_csv("text_features_labeled.csv")
-training_groundtruth = pd.read_csv("cleaned_training_groundtruth.csv")
-important_features = pd.read_csv("final_all_features_15_sec.csv")
+mfcc = pd.read_csv("../top_5_mfcc.csv")
+text_features_labeled = pd.read_csv("../text_features_labeled.csv")
+training_groundtruth = pd.read_csv("../cleaned_training_groundtruth.csv")
+important_features = pd.read_csv("../final_all_features_15_sec.csv")
 
 
 X_1 = training_groundtruth.drop('dx', axis=1)
