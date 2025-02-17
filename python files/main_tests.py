@@ -62,13 +62,13 @@ important_features = pd.read_csv("/home/droidis/PycharmProjects/projectML/final_
 ###### SVM???? ######## model = svm.SVC(kernel='rbf', gamma=0.5, C=1.5)
 
 # Feature selection
-X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
+'''X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
 y = training_groundtruth['dx']
 
 scaler = StandardScaler()
 
 # Standardize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
 
 ######################## NORMALIZE-STANDARDISE ##########################
 
@@ -83,7 +83,7 @@ scaler = StandardScaler()
 
 ########## MODEL WITH ALL FEATURES FUSED ############## model = svm.SVC(kernel='rbf', gamma=0.007, C=1, class_weight={'Control': 1, 'ProbableAD': 4})
 #important_features['dx'] = important_features['dx'].map({'Control': 0, 'ProbableAD': 1})
-'''X = important_features
+X = important_features
 
 X = X.drop('dx', axis=1)  # Features
 #X = X.drop('dx_y', axis=1)  # Features
@@ -105,8 +105,8 @@ X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 start_time = datetime.now()
 kf = KFold(n_splits=10, shuffle=True, random_state=42)
-#model = svm.SVC(kernel='rbf', gamma=0.009, C=2, class_weight={'Control': 1, 'ProbableAD': 1.3})
-model = LinearDiscriminantAnalysis(solver='eigen', shrinkage=0.7)
+model = svm.SVC(kernel='rbf', gamma=0.009, C=2, class_weight={'Control': 1, 'ProbableAD': 1.3})
+
 y_pred = cross_val_predict(model, X, y, cv=kf)
 
 cnf_matrix = metrics.confusion_matrix(y, y_pred)
@@ -124,9 +124,9 @@ print(f"Mean Accuracy: {np.mean(cv_scores):.4f}")
 
 end_time = datetime.now()
 elapsed_time = end_time - start_time
-print(f"Elapsed Time: {elapsed_time}")'''
+print(f"Elapsed Time: {elapsed_time}")
 ########## ENSEMBLE VOTING APPROACH ##############
-
+'''
 # standardize
 scaler = StandardScaler()
 
@@ -199,8 +199,9 @@ print(df_report)  # Replace with display function if needed
 end_time = datetime.now()
 elapsed_time = end_time - start_time
 print(f"Elapsed Time: {elapsed_time}")
+'''
 ##################################################################333
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
 #model = XGBClassifier(scale_pos_weight=3, learning_rate=1, max_depth=3)
 #model = svm.SVC(kernel='rbf', gamma=0.01, C=3, class_weight={'Control': 1, 'ProbableAD': 1.3})
@@ -226,7 +227,7 @@ print(f"Elapsed Time: {elapsed_time}")
 
 
 
-#fit_predict_accuracy(model, X_train, X_test, y_train, y_test)
+fit_predict_accuracy(model, X_train, X_test, y_train, y_test)
 
 
 # LDA because assumes linearity which indeed exists, no standardization because tends to overfit.??
@@ -240,7 +241,7 @@ print(f"Elapsed Time: {elapsed_time}")
 
 
 ######################## ENSEMBE K-FOLD #####################################
-from sklearn.model_selection import KFold, StratifiedKFold
+'''from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
 import numpy as np
@@ -267,7 +268,7 @@ y = training_groundtruth.dx  # Target variable
 #model2 = LinearDiscriminantAnalysis(solver='eigen', shrinkage=1)
 #model3 = SVC(kernel='rbf', gamma=0.9, C=0.8, class_weight={'Control': 1, 'ProbableAD': 1.2})
 
-'''#model1 = LogisticRegression(C=0.0001, penalty='l2', max_iter=50, tol=1e-0)
+#model1 = LogisticRegression(C=0.0001, penalty='l2', max_iter=50, tol=1e-0)
 model1 = svm.SVC(kernel='rbf', C=0.05)
 #model1 = svm.SVC(kernel='rbf', gamma=0.5, C=1.5)
 model2 = LinearDiscriminantAnalysis(solver='eigen', shrinkage=1)
@@ -275,8 +276,8 @@ model2 = LinearDiscriminantAnalysis(solver='eigen', shrinkage=1)
 #model3 = svm.SVC(kernel='rbf', gamma=0.9, C=0.8)
 model3 = svm.SVC(kernel='rbf',  C=0.8)'''
 
-
-model1 = LogisticRegression(C=0.17, penalty='l2', max_iter=100, class_weight={'Control': 1, 'ProbableAD': 1.3})
+'''
+#model1 = LogisticRegression(C=0.17, penalty='l2', max_iter=100, class_weight={'Control': 1, 'ProbableAD': 1.3})
 #model1 = svm.SVC(kernel='rbf', C=0.05)
 #model1 = svm.SVC(kernel='rbf', gamma=0.5, C=1.5)
 model2 = LinearDiscriminantAnalysis(solver='eigen', shrinkage=1)
@@ -340,4 +341,4 @@ print("Final Confusion Matrix:\n", final_conf_matrix)
 # Classification report
 final_report = classification_report(y_test, final_prediction, output_dict=True)
 df_final_report = pd.DataFrame(final_report).transpose()
-print(df_final_report)
+print(df_final_report)'''
