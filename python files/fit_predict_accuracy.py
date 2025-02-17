@@ -1,6 +1,9 @@
 from sklearn import metrics
 from sklearn.metrics import accuracy_score, f1_score
 import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
 
 def fit_predict_accuracy(model, X_train, X_test, y_train, y_test):
     model.fit(X_train, y_train)
