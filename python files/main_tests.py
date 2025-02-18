@@ -62,13 +62,13 @@ important_features = pd.read_csv("/home/droidis/PycharmProjects/projectML/final_
 ###### SVM???? ######## model = svm.SVC(kernel='rbf', gamma=0.5, C=1.5)
 
 # Feature selection
-'''X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
+X = training_groundtruth.drop(['dx', 'adressfname'], axis=1)  # Features
 y = training_groundtruth['dx']
 
 scaler = StandardScaler()
 
 # Standardize the DataFrame
-X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 ######################## NORMALIZE-STANDARDISE ##########################
 
@@ -79,11 +79,11 @@ X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)'''
 scaler = StandardScaler()
 
 # Standardize the DataFrame
-#X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
 ########## MODEL WITH ALL FEATURES FUSED ############## model = svm.SVC(kernel='rbf', gamma=0.007, C=1, class_weight={'Control': 1, 'ProbableAD': 4})
 #important_features['dx'] = important_features['dx'].map({'Control': 0, 'ProbableAD': 1})
-X = important_features
+'''X = important_features
 
 X = X.drop('dx', axis=1)  # Features
 #X = X.drop('dx_y', axis=1)  # Features
@@ -124,7 +124,7 @@ print(f"Mean Accuracy: {np.mean(cv_scores):.4f}")
 
 end_time = datetime.now()
 elapsed_time = end_time - start_time
-print(f"Elapsed Time: {elapsed_time}")
+print(f"Elapsed Time: {elapsed_time}")'''
 ########## ENSEMBLE VOTING APPROACH ##############
 '''
 # standardize
@@ -203,6 +203,7 @@ print(f"Elapsed Time: {elapsed_time}")
 ##################################################################333
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=16)
 
+model = LogisticRegression(C=0.1, penalty='l2', max_iter=100, class_weight={'Control': 1, 'ProbableAD': 1.24})
 #model = XGBClassifier(scale_pos_weight=3, learning_rate=1, max_depth=3)
 #model = svm.SVC(kernel='rbf', gamma=0.01, C=3, class_weight={'Control': 1, 'ProbableAD': 1.3})
 #model = svm.SVC(kernel='rbf', gamma=0.009, C=2, class_weight={'Control': 1, 'ProbableAD': 1.3}) # all top 5
