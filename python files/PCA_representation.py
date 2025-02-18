@@ -9,17 +9,17 @@ from sklearn.preprocessing import StandardScaler
 file_path = "/home/droidis/PycharmProjects/projectML/final_important_features_10_15_sec.csv"  # Change to your actual file path
 df = pd.read_csv(file_path)
 
-# Convert class labels to numeric for PCA visualization
+# convert class labels to numeric for PCA visualization
 df["dx"] = df["dx"].map({"Control": 0, "ProbableAD": 1})
 
-# Select only numeric features (excluding target variable)
+# Select only numeric features while excluding target variable and filenames
 feature_columns = [col for col in df.columns if col not in ["File", "dx"]]
 
-# Standardize the features (PCA is sensitive to scale)
+# standardize the features
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(df[feature_columns])
 
-# Apply PCA (reduce to 2 components for visualization)
+# apply PCA (reduce to 2 components for visualization)
 pca = PCA(n_components=2)
 X_pca = pca.fit_transform(X_scaled)
 

@@ -9,10 +9,10 @@ y = mfcc.dx
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=16)
 
-rf = RandomForestClassifier()
-rf.fit(X_train, y_train)
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
 
-importances = rf.feature_importances_
+importances = model.feature_importances_
 feature_importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': importances})
 feature_importance_df.sort_values(by='Importance', ascending=False)
 
